@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Normalização passo a passo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --surface-2:#E3E8EE; --ink:#16202B; --muted:#56616F; --line:#CDD4DD;
+  --pk:#2741A6; --on-pk:#FFFFFF; --ak:#0B7A70; --fk:#A35A00;
+  --fn1:#2D7A34; --fn2:#AD2A60; --fn3:#6845BF;
+  --rep:#FFE08A; --ok:#2D7A34; --bad:#B3261E;
+  --font:'Atkinson Hyperlegible', 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F141B; --surface:#171E27; --surface-2:#212A35; --ink:#E3E8EE; --muted:#9AA6B4; --line:#2B3643;
+    --pk:#93A9FF; --on-pk:#0F141B; --ak:#4CC9BC; --fk:#F2A852;
+    --fn1:#7CC883; --fn2:#F07CA9; --fn3:#B9A0FF;
+    --rep:rgba(242,190,60,.30); --ok:#7CC883; --bad:#FF8A80;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F141B; --surface:#171E27; --surface-2:#212A35; --ink:#E3E8EE; --muted:#9AA6B4; --line:#2B3643;
+  --pk:#93A9FF; --on-pk:#0F141B; --ak:#4CC9BC; --fk:#F2A852;
+  --fn1:#7CC883; --fn2:#F07CA9; --fn3:#B9A0FF;
+  --rep:rgba(242,190,60,.30); --ok:#7CC883; --bad:#FF8A80;
+  color-scheme:dark;
+}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px); -webkit-text-size-adjust:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--font)}
+a{color:var(--pk)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+:focus-visible{outline:3px solid var(--pk);outline-offset:2px;border-radius:4px}
+
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px;max-width:1240px;margin:0 auto;padding:40px 28px 72px}
+#steps{position:sticky;top:calc(env(safe-area-inset-top,0px) + 32px);align-self:start}
+#steps .brand{font-weight:700;font-size:1.05rem;line-height:1.3;margin:0 0 18px;padding-left:16px}
+#steps .brand span{display:block;font-weight:400;color:var(--muted);font-size:.9rem}
+#steps ol{list-style:none;margin:0;padding:0;border-left:2px solid var(--line)}
+#steps a{display:flex;gap:12px;align-items:baseline;padding:9px 14px;margin-left:-2px;border-left:2px solid transparent;color:var(--muted);text-decoration:none;line-height:1.3}
+#steps a .n{font-weight:700;font-variant-numeric:tabular-nums;min-width:1ch}
+#steps a:hover{color:var(--ink)}
+#steps a.done{color:var(--ink)}
+#steps a[aria-current="step"]{color:var(--ink);font-weight:700;border-left-color:var(--sc,var(--pk))}
+
+main{min-width:0;max-width:900px}
+section[data-step]{display:none}
+section[data-step].on{display:block;animation:in .25s ease-out}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){section[data-step].on{animation:none}}
+
+h1{font-size:clamp(2rem,4.4vw,2.9rem);line-height:1.1;letter-spacing:-.015em;margin:0 0 14px}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);line-height:1.2;letter-spacing:-.01em;margin:0 0 6px}
+h2::after{content:"";display:block;width:56px;height:5px;border-radius:3px;background:var(--sc,var(--pk));margin:14px 0 18px}
+h3{font-size:1.2rem;line-height:1.3;margin:44px 0 10px}
+h4{font-size:1rem;margin:0 0 4px}
+p,li{max-width:70ch}
+.lead{font-size:1.12rem;color:var(--ink)}
+.muted{color:var(--muted)}
+
+.rule{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--sc,var(--pk));border-radius:0 8px 8px 0;padding:14px 18px;margin:18px 0}
+.rule strong{display:block;margin-bottom:2px}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:12px 0 22px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+caption{text-align:left;font-family:var(--mono);font-weight:600;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+th,td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--muted)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+th.pk{color:var(--pk);text-decoration:underline;text-underline-offset:3px}
+th.ak{color:var(--ak)}
+th.fk{color:var(--fk)}
+th.pk.fk{color:var(--pk);box-shadow:inset 0 -3px 0 var(--fk)}
+table.prose th,table.prose td{white-space:normal;font-family:var(--font)}
+table.prose th{font-size:.82rem;color:var(--muted)}
+table.prose td code{white-space:nowrap}
+.ficha td{border-right:1px solid var(--line)}
+.ficha th.p1{box-shadow:inset 0 -4px 0 var(--fn1);color:var(--fn1)}
+.ficha th small{display:block;font-family:var(--font);font-weight:400;font-size:.72rem}
+.ficha th.grp{text-align:center;background:var(--surface-2)}
+body.show-rep td.rep{background:var(--rep);color:var(--ink)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:6px 0 4px}
+.btn{font:inherit;font-size:.95rem;line-height:1.3;padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary{background:var(--pk);color:var(--on-pk);border-color:var(--pk);font-weight:700}
+.counter{font-size:.92rem;color:var(--muted)}
+.counter b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+.schema{font-family:var(--mono);font-size:.88rem;line-height:1.75;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px;overflow-x:auto;margin:12px 0}
+.rel-line{white-space:nowrap;padding:3px 0}
+.rel-line .t{font-weight:600}
+.schema .pk,.legend .pk{text-decoration:underline;text-underline-offset:3px;color:var(--pk);font-weight:600}
+.schema .ak,.legend .ak{color:var(--ak)}
+.schema .fk,.legend .fk{color:var(--fk)}
+.schema .pk.fk{color:var(--pk)}
+.schema .pend,.legend .pend{text-decoration-style:dashed}
+.schema sup,.legend sup{font-size:.62em;margin-left:1px;color:var(--fk);font-weight:600}
+.schema .ak sup,.legend .ak sup{color:var(--ak)}
+.schema .pend sup,.legend .pend sup{color:var(--muted)}
+.newtag{display:inline-block;font-family:var(--font);font-size:.72rem;font-weight:700;padding:0 7px;border-radius:999px;background:var(--sc,var(--pk));color:var(--bg);margin-right:8px;vertical-align:1px}
+.legend{font-size:.85rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px;margin:4px 0}
+.legend span span{font-family:var(--mono)}
+
+/* mapa de dependências */
+.fdmap{display:flex;flex-wrap:wrap;gap:8px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin:12px 0 18px}
+.chip{font-family:var(--mono);font-size:.84rem;padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:var(--bg);transition:opacity .2s,background .2s,color .2s}
+.chip small{font-family:var(--font);color:var(--fn1);margin-left:4px}
+.fdmap.active .chip{opacity:.35}
+.fdmap.active .chip.det,.fdmap.active .chip.dep{opacity:1}
+.chip.det{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.det small{color:var(--bg)}
+.chip.dep{border-color:var(--tc);color:var(--tc);box-shadow:inset 0 0 0 1px var(--tc);font-weight:600;background:var(--surface)}
+.fdlist{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.fd{width:100%;display:grid;grid-template-columns:3.2em minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;font:inherit;font-size:.95rem;padding:9px 12px;border:1px solid var(--line);border-left:4px solid var(--tc);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer}
+.fd:hover{border-color:var(--muted);border-left-color:var(--tc)}
+.fd[aria-pressed="true"]{background:var(--surface-2);border-color:var(--tc)}
+.fd .id{font-weight:700;color:var(--muted)}
+.fd code{font-size:.84rem;overflow-wrap:anywhere}
+.tag{font-size:.75rem;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid var(--tc);color:var(--tc);white-space:nowrap}
+.fdexp{min-height:4.2em;margin:14px 0 0;padding:12px 16px;border-radius:8px;background:var(--surface-2)}
+
+.anom{border-left:3px solid var(--fn2);padding:2px 0 2px 16px;margin:16px 0}
+.anom p{margin:0}
+.ops{counter-reset:op;list-style:none;padding:0;margin:0}
+.ops>li{position:relative;padding-left:44px;margin:0 0 26px;max-width:none}
+.ops>li::before{counter-increment:op;content:counter(op, lower-alpha);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:var(--sc);color:var(--bg);font-weight:700;display:grid;place-items:center;line-height:1}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 18px;font-family:var(--mono);font-size:.88rem}
+.chain .n{padding:5px 11px;border-radius:6px;border:1px solid var(--line);background:var(--surface)}
+.chain .n.k{border-color:var(--pk);color:var(--pk);font-weight:600}
+.chain .n.m{border-color:var(--fn3);color:var(--fn3);font-weight:600}
+.chain .a{color:var(--muted)}
+.note{background:var(--surface);border:1px dashed var(--muted);border-radius:8px;padding:12px 16px;margin:18px 0}
+.note h4{margin-bottom:4px}
+
+.verdict-ok{color:var(--ok);font-weight:700}
+.verdict-bad{color:var(--fn2);font-weight:700}
+
+/* diagrama */
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;margin:14px 0 20px}
+.diagram svg{display:block;width:100%;min-width:620px;height:auto}
+.er-box{fill:var(--bg);stroke:var(--line);stroke-width:1.2}
+.er-head{fill:var(--surface-2)}
+.er-t{font-family:var(--mono);font-size:13px;font-weight:600;fill:var(--ink)}
+.er-a{font-family:var(--mono);font-size:12px;fill:var(--ink)}
+.er-a.pk{fill:var(--pk);font-weight:600;text-decoration:underline}
+.er-a.ak{fill:var(--ak)}
+.er-a.fk{fill:var(--fk)}
+.er-b{font-family:var(--font);font-size:10px;font-weight:700;fill:var(--muted)}
+.er-line{fill:none;stroke:var(--fk);stroke-width:2}
+.er-head-arrow{fill:var(--fk)}
+.er-c{font-family:var(--font);font-size:12px;font-weight:700;fill:var(--fk)}
+
+.result{margin:12px 0;padding:12px 16px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+.result ul{margin:6px 0 0;padding-left:20px}
+.result .ok{color:var(--ok);font-weight:700}
+.result .bad{color:var(--bad);font-weight:700}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.55;margin:12px 0}
+details{margin:18px 0}
+summary{cursor:pointer;font-weight:700}
+
+.quiz{display:grid;gap:18px;margin:12px 0}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.q p{margin:0 0 10px;font-weight:700}
+.q .opts{display:flex;flex-direction:column;gap:6px}
+.q .opt{text-align:left;font:inherit;font-size:.95rem;padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.q .opt:disabled{cursor:default}
+.q .opt.right{border-color:var(--ok);box-shadow:inset 4px 0 0 var(--ok)}
+.q .opt.wrong{border-color:var(--bad);box-shadow:inset 4px 0 0 var(--bad)}
+.q .exp{margin:10px 0 0;font-size:.93rem}
+.q .exp b{display:inline}
+.score{font-weight:700}
+
+.stepnav{display:flex;justify-content:space-between;gap:12px;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)}
+.stepnav .btn{max-width:48%}
+.stepnav .btn span{display:block;font-size:.78rem;color:inherit;opacity:.8;font-weight:400}
+
+@media (max-width: 900px){
+  .layout{grid-template-columns:1fr;gap:0;padding:0 0 56px}
+  #steps{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);border-bottom:1px solid var(--line)}
+  #steps .brand{display:none}
+  #steps ol{display:flex;overflow-x:auto;border-left:0;scrollbar-width:none}
+  #steps ol::-webkit-scrollbar{display:none}
+  #steps a{border-left:0;margin:0;border-bottom:3px solid transparent;white-space:nowrap;padding:12px 14px}
+  #steps a[aria-current="step"]{border-bottom-color:var(--sc,var(--pk))}
+  main{padding:26px 18px 0}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:11;background:var(--bg)}
+  body{font-size:16px}
+  .fd{grid-template-columns:2.6em minmax(0,1fr)}
+  .fd .tag{grid-column:2;justify-self:start}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav id="steps" aria-label="Etapas da normalização">
+    <p class="brand">Normalização passo a passo<span>Modelagem de Banco de Dados</span></p>
+    <ol>
+      <li><a href="#caso" data-go="caso"><span class="n">0</span>O caso</a></li>
+      <li><a href="#chaves" data-go="chaves"><span class="n">1</span>Chaves e dependências</a></li>
+      <li><a href="#fn1" data-go="fn1"><span class="n">2</span>1FN</a></li>
+      <li><a href="#fn2" data-go="fn2"><span class="n">3</span>2FN</a></li>
+      <li><a href="#fn3" data-go="fn3"><span class="n">4</span>3FN</a></li>
+      <li><a href="#fks" data-go="fks"><span class="n">5</span>Chaves estrangeiras</a></li>
+      <li><a href="#conferencia" data-go="conferencia"><span class="n">6</span>Conferência</a></li>
+    </ol>
+  </nav>
+
+  <main id="main" tabindex="-1">
+
+  <!-- 0. CASO -->
+  <section data-step="caso" data-title="O caso" style="--sc:var(--ink)">
+    <h1>Do pedido bagunçado à terceira forma normal</h1>
+    <p class="lead">A Papelaria Ponto Final controla as vendas numa única planilha. Cada pedido ocupa uma ficha com tudo junto: cliente, vendedor e itens comprados. Funciona… até alguém precisar mudar alguma coisa.</p>
+
+    <h3>A ficha de pedidos</h3>
+    <p>As colunas marcadas em verde já denunciam o primeiro problema: o <b>endereço</b> é um atributo composto, os <b>telefones</b> são multivalorados e os <b>itens</b> formam um grupo que se repete dentro do mesmo pedido.</p>
+    <div class="toolbar">
+      <button class="btn rep-toggle" aria-pressed="false">Destacar dados repetidos</button>
+      <span class="counter" data-count></span>
+    </div>
+    <div class="tbl-wrap" id="t-ficha"></div>
+
+    <h3>O que dá errado com essa planilha</h3>
+    <div class="anom"><h4>Anomalia de inserção</h4><p>A loja comprou estojos, mas não consegue cadastrá-los: não existe linha para um produto que ainda não apareceu em nenhum pedido.</p></div>
+    <div class="anom"><h4>Anomalia de atualização</h4><p>A Ana trocou de e-mail. O novo e-mail precisa ser corrigido em todos os pedidos dela; se alguém esquecer um, o banco passa a ter dois e-mails para a mesma pessoa.</p></div>
+    <div class="anom"><h4>Anomalia de exclusão</h4><p>Ao apagar o pedido 1002, somem junto o único registro do cliente Bruno e da vendedora Marina.</p></div>
+
+    <div class="rule"><strong>Normalizar é responder “quem determina quem?”</strong>Por isso o primeiro passo não é sair dividindo tabelas. É encontrar as chaves e as dependências funcionais. Todas as decisões das próximas etapas saem delas.</div>
+    <div class="stepnav"></div>
+  </section>
+
+  <!-- 1. CHAVES E DFs -->
+  <section data-step="chaves" data-title="Chaves e dependências" style="--sc:var(--pk)">
+    <h2>Identificar chaves e dependências funcionais</h2>
+    <p class="lead">Uma dependência funcional <code>X → Y</code> diz que cada valor de X corresponde a <b>um único</b> valor de Y. Conhecendo X, você sabe Y.</p>
+
+    <h3>Mapa de dependências</h3>
+    <p>Estes são os atributos da ficha. Escolha uma dependência na lista abaixo para ver o determinante (preenchido) e o que ele determina (contornado).</p>
+    <div class="fdmap" id="fdmap"></div>
+    <ul class="fdlist" id="fdlist"></ul>
+    <div class="fdexp" id="fdexp" aria-live="polite">Escolha uma dependência para ver quem determina quem.</div>
+
+    <h3>Chaves candidatas, primárias e alternativas</h3>
+    <p>Uma <b>chave candidata</b> é um conjunto mínimo de atributos que determina todos os outros de um mesmo assunto. Escolhemos uma como <b>primária</b>; as demais viram <b>alternativas</b> (no SQL, <code>UNIQUE</code>).</p>
+    <div class="tbl-wrap">
+      <table class="prose">
+        <thead><tr><th>Assunto</th><th>Chaves candidatas</th><th>Primária</th><th>Alternativa</th><th>Por quê</th></tr></thead>
+        <tbody>
+          <tr><td>Pedido</td><td><code>numPedido</code></td><td><code>numPedido</code></td><td>—</td><td>Única candidata.</td></tr>
+          <tr><td>Cliente</td><td><code>cpfCliente</code>, <code>emailCliente</code></td><td><code>cpfCliente</code></td><td><code>emailCliente</code></td><td>O e-mail também identifica, mas muda com frequência. O CPF é estável.</td></tr>
+          <tr><td>Vendedor</td><td><code>matVendedor</code></td><td><code>matVendedor</code></td><td>—</td><td>Única candidata.</td></tr>
+          <tr><td>Produto</td><td><code>codProduto</code>, <code>ean</code></td><td><code>codProduto</code></td><td><code>ean</code></td><td>O código interno é curto e controlado pela loja. O EAN (código de barras) vem do fornecedor.</td></tr>
+          <tr><td>Item do pedido</td><td><code>{numPedido, codProduto}</code></td><td><code>{numPedido, codProduto}</code></td><td>—</td><td>Chave composta: o mesmo produto aparece uma vez por pedido.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Diagnóstico: cada problema tem uma forma normal</h3>
+    <div class="tbl-wrap">
+      <table class="prose">
+        <thead><tr><th>Problema</th><th>Onde aparece</th><th>Resolve na</th></tr></thead>
+        <tbody>
+          <tr><td>Atributo composto</td><td><code>endereço</code></td><td><b style="color:var(--fn1)">1FN</b></td></tr>
+          <tr><td>Atributo multivalorado</td><td><code>telefones</code> (DF4)</td><td><b style="color:var(--fn1)">1FN</b></td></tr>
+          <tr><td>Grupo repetitivo</td><td>itens do pedido</td><td><b style="color:var(--fn1)">1FN</b></td></tr>
+          <tr><td>Dependência parcial</td><td><code>codProduto → ean, descricao, precoTabela</code> depende só de parte da chave <code>{numPedido, codProduto}</code> (DF6)</td><td><b style="color:var(--fn2)">2FN</b></td></tr>
+          <tr><td>Dependência transitiva</td><td><code>numPedido → cpfCliente → nomeCliente…</code> (DF1 + DF2) e <code>numPedido → matVendedor → nomeVendedor</code> (DF1 + DF5)</td><td><b style="color:var(--fn3)">3FN</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stepnav"></div>
+  </section>
+
+  <!-- 2. 1FN -->
+  <section data-step="fn1" data-title="1FN" style="--sc:var(--fn1)">
+    <h2>Primeira Forma Normal (1FN)</h2>
+    <div class="rule"><strong>Regra</strong>Todo atributo deve ser atômico: nada de atributos compostos, multivalorados ou grupos repetitivos.</div>
+
+    <ol class="ops">
+      <li>
+        <h4>Atributo composto: decompor no próprio lugar</h4>
+        <p><code>endereço</code> vira seis atributos simples. Nenhuma tabela nova é criada.</p>
+        <div class="chain"><span class="n">endereço</span><span class="a">⇒</span><span class="n">logradouro</span><span class="n">numero</span><span class="n">bairro</span><span class="n">cidade</span><span class="n">uf</span><span class="n">cep</span></div>
+      </li>
+      <li>
+        <h4>Atributo multivalorado: nova tabela</h4>
+        <p>A chave da nova tabela é a chave de <b>quem determina</b> o atributo mais o próprio valor. A DF4 mostra que os telefones dependem do cliente, não do pedido. Por isso a tabela leva <code>cpfCliente</code>, e não <code>numPedido</code>.</p>
+        <div class="chain"><span class="n k">cpfCliente</span><span class="a">→→</span><span class="n">telefone</span><span class="a">⇒</span><span class="n">CLIENTE_TELEFONE(cpfCliente, telefone)</span></div>
+      </li>
+      <li>
+        <h4>Grupo repetitivo: nova tabela</h4>
+        <p>Os itens saem para uma tabela própria. A chave é a da tabela de origem (<code>numPedido</code>) mais a chave do grupo (<code>codProduto</code>).</p>
+        <div class="chain"><span class="n k">numPedido</span><span class="a">+</span><span class="n k">codProduto</span><span class="a">⇒</span><span class="n">ITEM_PEDIDO</span></div>
+      </li>
+    </ol>
+
+    <h3>Resultado da 1FN</h3>
+    <div class="schema" id="s-fn1"></div>
+    <div class="legend" data-legend></div>
+    <p>Repare em duas chaves estrangeiras que já surgiram: <code>ITEM_PEDIDO.numPedido</code> aponta para <code>PEDIDO</code>. Já <code>CLIENTE_TELEFONE.cpfCliente</code> ainda não tem para onde apontar, porque a tabela de clientes só nasce na 3FN. Fica anotada como <b>pendente</b>.</p>
+
+    <div class="toolbar">
+      <button class="btn rep-toggle" aria-pressed="false">Destacar dados repetidos</button>
+      <span class="counter" data-count></span>
+    </div>
+    <div id="d-fn1"></div>
+    <div class="note"><h4>A redundância aumentou?</h4><p>Sim. Ao separar o endereço em seis colunas, os dados repetidos da Ana ficaram mais visíveis. A 1FN resolve a atomicidade, não a redundância. Quem ataca a redundância são a 2FN e a 3FN.</p></div>
+    <div class="stepnav"></div>
+  </section>
+
+  <!-- 3. 2FN -->
+  <section data-step="fn2" data-title="2FN" style="--sc:var(--fn2)">
+    <h2>Segunda Forma Normal (2FN)</h2>
+    <div class="rule"><strong>Regra</strong>Estar na 1FN e todo atributo não-chave depender da chave primária <b>inteira</b>, e não de parte dela.</div>
+    <p>Dependência parcial só existe quando há uma parte da chave para depender. Então só tabelas com <b>chave composta</b> precisam ser examinadas.</p>
+
+    <div class="tbl-wrap">
+      <table class="prose">
+        <thead><tr><th>Tabela</th><th>Chave</th><th>Situação</th></tr></thead>
+        <tbody>
+          <tr><td><code>PEDIDO</code></td><td>simples</td><td><span class="verdict-ok">Já está na 2FN.</span> Chave simples não tem partes.</td></tr>
+          <tr><td><code>CLIENTE_TELEFONE</code></td><td>composta</td><td><span class="verdict-ok">Já está na 2FN.</span> Não tem atributos não-chave.</td></tr>
+          <tr><td><code>ITEM_PEDIDO</code></td><td>composta</td><td><span class="verdict-bad">Examinar atributo por atributo.</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Examinando ITEM_PEDIDO</h3>
+    <p>Para cada atributo não-chave, pergunte: preciso das duas partes da chave para saber o valor dele?</p>
+    <div class="tbl-wrap">
+      <table class="prose">
+        <thead><tr><th>Atributo</th><th>Depende de numPedido?</th><th>Depende de codProduto?</th><th>Veredito</th></tr></thead>
+        <tbody>
+          <tr><td><code>quantidade</code></td><td>sim</td><td>sim</td><td><span class="verdict-ok">Chave inteira, fica</span></td></tr>
+          <tr><td><code>precoVendido</code></td><td>sim</td><td>sim</td><td><span class="verdict-ok">Chave inteira, fica</span></td></tr>
+          <tr><td><code>ean</code></td><td>não</td><td>sim</td><td><span class="verdict-bad">Parcial, sai</span></td></tr>
+          <tr><td><code>descricao</code></td><td>não</td><td>sim</td><td><span class="verdict-bad">Parcial, sai</span></td></tr>
+          <tr><td><code>precoTabela</code></td><td>não</td><td>sim</td><td><span class="verdict-bad">Parcial, sai</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>A decomposição</h3>
+    <p>Os atributos com dependência parcial saem junto com o seu determinante, <code>codProduto</code>, que vira chave primária da nova tabela <code>PRODUTO</code>. Em <code>ITEM_PEDIDO</code>, <code>codProduto</code> continua na chave e passa a ser também <b>chave estrangeira</b>. A chave alternativa <code>ean</code> (DF7) acompanha o produto.</p>
+    <div class="chain"><span class="n k">codProduto</span><span class="a">→</span><span class="n">ean, descricao, precoTabela</span><span class="a">⇒</span><span class="n">PRODUTO</span></div>
+
+    <h3>Resultado da 2FN</h3>
+    <div class="schema" id="s-fn2"></div>
+    <div class="legend" data-legend></div>
+    <div class="toolbar">
+      <button class="btn rep-toggle" aria-pressed="false">Destacar dados repetidos</button>
+      <span class="counter" data-count></span>
+    </div>
+    <div id="d-fn2"></div>
+
+    <div class="note"><h4>Por que existem dois preços?</h4><p><code>precoTabela</code> é o preço atual do produto e depende só de <code>codProduto</code>. <code>precoVendido</code> é o preço praticado naquele pedido (com desconto, por exemplo) e depende da chave inteira. Se a loja reajustar a caneta amanhã, o histórico dos pedidos não muda.</p></div>
+    <div class="stepnav"></div>
+  </section>
+
+  <!-- 4. 3FN -->
+  <section data-step="fn3" data-title="3FN" style="--sc:var(--fn3)">
+    <h2>Terceira Forma Normal (3FN)</h2>
+    <div class="rule"><strong>Regra</strong>Estar na 2FN e nenhum atributo não-chave depender de outro atributo não-chave. Ou seja: sem dependências transitivas.</div>
+
+    <h3>Examinando PEDIDO</h3>
+    <p>Em <code>PEDIDO</code>, o CPF e a matrícula não são chave, mas determinam outros atributos. Formam-se duas cadeias:</p>
+    <div class="chain"><span class="n k">numPedido</span><span class="a">→</span><span class="n m">cpfCliente</span><span class="a">→</span><span class="n">nomeCliente, emailCliente, logradouro, numero, bairro, cidade, uf, cep</span></div>
+    <div class="chain"><span class="n k">numPedido</span><span class="a">→</span><span class="n m">matVendedor</span><span class="a">→</span><span class="n">nomeVendedor</span></div>
+    <p>Cada atributo do meio da cadeia vira chave primária de uma tabela nova, levando o que ele determina. Na tabela de origem ele permanece como <b>chave estrangeira</b>.</p>
+
+    <h3>As outras tabelas</h3>
+    <div class="tbl-wrap">
+      <table class="prose">
+        <thead><tr><th>Tabela</th><th>Análise</th></tr></thead>
+        <tbody>
+          <tr><td><code>ITEM_PEDIDO</code></td><td><span class="verdict-ok">Na 3FN.</span> <code>quantidade</code> e <code>precoVendido</code> não determinam um ao outro.</td></tr>
+          <tr><td><code>CLIENTE_TELEFONE</code></td><td><span class="verdict-ok">Na 3FN.</span> Não tem atributos não-chave.</td></tr>
+          <tr><td><code>PRODUTO</code></td><td><span class="verdict-ok">Na 3FN.</span> Existe <code>ean → descricao</code>, mas <code>ean</code> é chave alternativa, não um atributo não-chave. Quando o determinante é chave candidata, não há transitividade.</td></tr>
+          <tr><td><code>CLIENTE</code> (nova)</td><td><span class="verdict-ok">Na 3FN.</span> <code>emailCliente</code> determina os demais, mas também é chave candidata.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Resultado da 3FN</h3>
+    <div class="schema" id="s-fn3"></div>
+    <div class="legend" data-legend></div>
+    <div class="toolbar">
+      <button class="btn rep-toggle" aria-pressed="false">Destacar dados repetidos</button>
+      <span class="counter" data-count></span>
+    </div>
+    <div id="d-fn3"></div>
+
+    <div class="note"><h4>Para discutir em aula: e o CEP?</h4><p>Na maioria dos casos, o CEP determina bairro, cidade e UF. Seria, então, mais uma dependência transitiva dentro de <code>CLIENTE</code>: <code>cpfCliente → cep → cidade</code>. Separar uma tabela de CEPs é correto em teoria, mas muitos projetos mantêm o endereço junto por simplicidade, sobretudo quando não há uma base oficial de CEPs para manter. É uma decisão de projeto, e vale a pena justificá-la na documentação.</p></div>
+    <div class="stepnav"></div>
+  </section>
+
+  <!-- 5. FKs -->
+  <section data-step="fks" data-title="Chaves estrangeiras" style="--sc:var(--fk)">
+    <h2>Verificar as chaves estrangeiras</h2>
+    <p class="lead">Toda decomposição deixa um elo para trás: o determinante que virou chave primária da tabela nova continua na tabela de origem, agora como chave estrangeira. É por esse elo que os dados voltam a se juntar.</p>
+
+    <div class="diagram" id="diagram" role="img" aria-label="Diagrama das seis tabelas finais e as chaves estrangeiras entre elas"></div>
+
+    <div class="tbl-wrap">
+      <table class="prose">
+        <thead><tr><th>Chave estrangeira</th><th>Referencia</th><th>Surgiu na</th><th>Leitura</th></tr></thead>
+        <tbody>
+          <tr><td><code>ITEM_PEDIDO.numPedido</code></td><td><code>PEDIDO.numPedido</code></td><td>1FN</td><td>1 pedido tem N itens</td></tr>
+          <tr><td><code>CLIENTE_TELEFONE.cpfCliente</code></td><td><code>CLIENTE.cpfCliente</code></td><td>1FN, concluída na 3FN</td><td>1 cliente tem N telefones</td></tr>
+          <tr><td><code>ITEM_PEDIDO.codProduto</code></td><td><code>PRODUTO.codProduto</code></td><td>2FN</td><td>1 produto aparece em N itens</td></tr>
+          <tr><td><code>PEDIDO.cpfCliente</code></td><td><code>CLIENTE.cpfCliente</code></td><td>3FN</td><td>1 cliente faz N pedidos</td></tr>
+          <tr><td><code>PEDIDO.matVendedor</code></td><td><code>VENDEDOR.matVendedor</code></td><td>3FN</td><td>1 vendedor atende N pedidos</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Para cada chave estrangeira, confira</h3>
+    <ul>
+      <li>Ela aponta para a chave primária (ou alternativa) de uma tabela que existe. A pendência da 1FN foi resolvida quando <code>CLIENTE</code> nasceu.</li>
+      <li>Tem o mesmo domínio e o mesmo tipo da chave referenciada (<code>CHAR(14)</code> com <code>CHAR(14)</code>).</li>
+      <li>A obrigatoriedade faz sentido: todo pedido tem cliente e vendedor, então as duas são <code>NOT NULL</code>.</li>
+      <li>A cardinalidade lida em voz alta faz sentido para o negócio.</li>
+      <li>Nenhum determinante ficou “solto”: cada tabela criada na decomposição está ligada à sua origem.</li>
+    </ul>
+
+    <h3>Integridade referencial com os dados</h3>
+    <p>Todo valor de chave estrangeira precisa existir na tabela referenciada. Verifique os dados do exemplo e depois simule um erro.</p>
+    <div class="toolbar">
+      <button class="btn primary" id="btn-ri">Verificar integridade</button>
+      <button class="btn" id="btn-bad" aria-pressed="false">Simular pedido 1004 com CPF não cadastrado</button>
+    </div>
+    <div class="result" id="ri-out" aria-live="polite"><span class="muted">O resultado aparece aqui.</span></div>
+    <div class="stepnav"></div>
+  </section>
+
+  <!-- 6. CONFERÊNCIA -->
+  <section data-step="conferencia" data-title="Conferência" style="--sc:var(--ok)">
+    <h2>Conferir o resultado</h2>
+    <p class="lead">Uma normalização correta passa em quatro testes: cada tabela está na 3FN, nenhuma dependência se perdeu, nenhuma informação se perdeu e as anomalias desapareceram.</p>
+
+    <h3>Esquema final</h3>
+    <div class="schema" id="s-final"></div>
+    <div class="legend" data-legend></div>
+
+    <h3>Cada tabela em cada forma normal</h3>
+    <div class="tbl-wrap">
+      <table class="prose">
+        <thead><tr><th>Tabela</th><th>1FN</th><th>2FN</th><th>3FN</th><th>Justificativa</th></tr></thead>
+        <tbody>
+          <tr><td><code>CLIENTE</code></td><td>✓</td><td>✓</td><td>✓</td><td>Atributos atômicos, chave simples, determinantes são chaves candidatas.</td></tr>
+          <tr><td><code>CLIENTE_TELEFONE</code></td><td>✓</td><td>✓</td><td>✓</td><td>Só atributos de chave.</td></tr>
+          <tr><td><code>VENDEDOR</code></td><td>✓</td><td>✓</td><td>✓</td><td>Chave simples, um único atributo não-chave.</td></tr>
+          <tr><td><code>PRODUTO</code></td><td>✓</td><td>✓</td><td>✓</td><td>Chave simples; <code>ean</code> é chave alternativa.</td></tr>
+          <tr><td><code>PEDIDO</code></td><td>✓</td><td>✓</td><td>✓</td><td>Os atributos não-chave dependem só de <code>numPedido</code>.</td></tr>
+          <tr><td><code>ITEM_PEDIDO</code></td><td>✓</td><td>✓</td><td>✓</td><td>Os atributos não-chave dependem da chave inteira.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Nenhuma dependência se perdeu</h3>
+    <p>Cada dependência funcional identificada no passo 1 precisa caber inteira em alguma tabela, para que o banco consiga garanti-la.</p>
+    <div class="tbl-wrap" id="t-preserv"></div>
+
+    <h3>Nenhuma informação se perdeu</h3>
+    <p>Juntando as tabelas pelas chaves estrangeiras, a ficha original tem que voltar, sem linhas a mais nem a menos.</p>
+<pre><code>SELECT p.numPedido, p.dataPedido, c.nomeCliente, c.emailCliente, c.cidade,
+       v.nomeVendedor, pr.descricao, i.quantidade, i.precoVendido
+FROM PEDIDO p
+JOIN CLIENTE     c  ON c.cpfCliente  = p.cpfCliente
+JOIN VENDEDOR    v  ON v.matVendedor = p.matVendedor
+JOIN ITEM_PEDIDO i  ON i.numPedido   = p.numPedido
+JOIN PRODUTO     pr ON pr.codProduto = i.codProduto
+ORDER BY p.numPedido, pr.codProduto;</code></pre>
+    <div class="toolbar"><button class="btn primary" id="btn-join">Executar a junção</button></div>
+    <div id="join-out" aria-live="polite"></div>
+
+    <h3>As anomalias sumiram</h3>
+    <div class="anom" style="border-color:var(--ok)"><h4>Inserção</h4><p>O estojo entra em <code>PRODUTO</code> sem precisar de nenhum pedido.</p></div>
+    <div class="anom" style="border-color:var(--ok)"><h4>Atualização</h4><p>O e-mail da Ana muda numa única linha de <code>CLIENTE</code>.</p></div>
+    <div class="anom" style="border-color:var(--ok)"><h4>Exclusão</h4><p>Apagar o pedido 1002 (e seus itens) não apaga o Bruno nem a Marina.</p></div>
+
+    <details>
+      <summary>Ver o script SQL de criação</summary>
+      <p class="muted">Repare na ordem: as tabelas referenciadas são criadas antes das que as referenciam. Essa é mais uma forma de conferir as chaves estrangeiras.</p>
+<pre><code>CREATE TABLE CLIENTE (
+  cpfCliente   CHAR(14)     PRIMARY KEY,
+  nomeCliente  VARCHAR(100) NOT NULL,
+  emailCliente VARCHAR(120) NOT NULL UNIQUE,
+  logradouro   VARCHAR(120) NOT NULL,
+  numero       VARCHAR(10)  NOT NULL,
+  bairro       VARCHAR(60)  NOT NULL,
+  cidade       VARCHAR(60)  NOT NULL,
+  uf           CHAR(2)      NOT NULL,
+  cep          CHAR(9)      NOT NULL
+);
+
+CREATE TABLE CLIENTE_TELEFONE (
+  cpfCliente CHAR(14)    NOT NULL,
+  telefone   VARCHAR(20) NOT NULL,
+  PRIMARY KEY (cpfCliente, telefone),
+  FOREIGN KEY (cpfCliente) REFERENCES CLIENTE (cpfCliente)
+);
+
+CREATE TABLE VENDEDOR (
+  matVendedor  CHAR(3)      PRIMARY KEY,
+  nomeVendedor VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE PRODUTO (
+  codProduto  CHAR(3)       PRIMARY KEY,
+  ean         CHAR(13)      NOT NULL UNIQUE,
+  descricao   VARCHAR(100)  NOT NULL,
+  precoTabela DECIMAL(10,2) NOT NULL
+);
+
+CREATE TABLE PEDIDO (
+  numPedido   INT      PRIMARY KEY,
+  dataPedido  DATE     NOT NULL,
+  cpfCliente  CHAR(14) NOT NULL,
+  matVendedor CHAR(3)  NOT NULL,
+  FOREIGN KEY (cpfCliente)  REFERENCES CLIENTE (cpfCliente),
+  FOREIGN KEY (matVendedor) REFERENCES VENDEDOR (matVendedor)
+);
+
+CREATE TABLE ITEM_PEDIDO (
+  numPedido    INT           NOT NULL,
+  codProduto   CHAR(3)       NOT NULL,
+  quantidade   INT           NOT NULL CHECK (quantidade &gt; 0),
+  precoVendido DECIMAL(10,2) NOT NULL,
+  PRIMARY KEY (numPedido, codProduto),
+  FOREIGN KEY (numPedido)  REFERENCES PEDIDO (numPedido),
+  FOREIGN KEY (codProduto) REFERENCES PRODUTO (codProduto)
+);</code></pre>
+    </details>
+
+    <h3>Teste rápido</h3>
+    <div class="quiz" id="quiz"></div>
+    <p class="score" id="score" aria-live="polite"></p>
+    <div class="stepnav"></div>
+  </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- dados do exemplo ---------- */
+  var D = {
+    clientes: [
+      {cpfCliente:'111.222.333-44', nomeCliente:'Ana Souza', emailCliente:'ana.souza@email.com', logradouro:'Rua das Flores', numero:'120', bairro:'Centro', cidade:'São Paulo', uf:'SP', cep:'01010-000'},
+      {cpfCliente:'555.666.777-88', nomeCliente:'Bruno Alves', emailCliente:'bruno.alves@email.com', logradouro:'Av. Paulista', numero:'1500', bairro:'Bela Vista', cidade:'São Paulo', uf:'SP', cep:'01310-100'}
+    ],
+    telefones: [
+      {cpfCliente:'111.222.333-44', telefone:'(11) 99999-1111'},
+      {cpfCliente:'111.222.333-44', telefone:'(11) 3333-2222'},
+      {cpfCliente:'555.666.777-88', telefone:'(11) 98888-3333'}
+    ],
+    vendedores: [
+      {matVendedor:'V01', nomeVendedor:'Carlos Lima'},
+      {matVendedor:'V02', nomeVendedor:'Marina Reis'}
+    ],
+    produtos: [
+      {codProduto:'P10', ean:'7891000100103', descricao:'Caneta azul', precoTabela:3.50},
+      {codProduto:'P20', ean:'7891000200206', descricao:'Caderno 200 folhas', precoTabela:24.90},
+      {codProduto:'P30', ean:'7891000300309', descricao:'Mochila escolar', precoTabela:129.90}
+    ],
+    pedidos: [
+      {numPedido:1001, dataPedido:'10/03/2026', cpfCliente:'111.222.333-44', matVendedor:'V01'},
+      {numPedido:1002, dataPedido:'11/03/2026', cpfCliente:'555.666.777-88', matVendedor:'V02'},
+      {numPedido:1003, dataPedido:'12/03/2026', cpfCliente:'111.222.333-44', matVendedor:'V01'}
+    ],
+    itens: [
+      {numPedido:1001, codProduto:'P10', quantidade:10, precoVendido:3.20},
+      {numPedido:1001, codProduto:'P20', quantidade:2, precoVendido:24.90},
+      {numPedido:1002, codProduto:'P10', quantidade:5, precoVendido:3.50},
+      {numPedido:1003, codProduto:'P20', quantidade:1, precoVendido:24.90},
+      {numPedido:1003, codProduto:'P30', quantidade:1, precoVendido:119.90}
+    ]
+  };
+  function find(arr, k, v){ for (var i=0;i<arr.length;i++) if (arr[i][k]===v) return arr[i]; return null; }
+  function cli(cpf){ return find(D.clientes,'cpfCliente',cpf); }
+  function vend(m){ return find(D.vendedores,'matVendedor',m); }
+  function prod(c){ return find(D.produtos,'codProduto',c); }
+  function assign(){ var o={}; for (var i=0;i<arguments.length;i++){ var s=arguments[i]; for (var k in s) o[k]=s[k]; } return o; }
+  function money(v){ return 'R$ ' + v.toFixed(2).replace('.', ','); }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmt(k, v){ return (k.indexOf('preco')===0) ? money(v) : esc(v); }
+  function isNum(k){ return k.indexOf('preco')===0 || k==='quantidade'; }
+
+  /* ---------- esquemas ---------- */
+  var CLI_ATTRS = [['nomeCliente'],['emailCliente'],['logradouro'],['numero'],['bairro'],['cidade'],['uf'],['cep']];
+  var S = {
+    pedido1: {t:'PEDIDO', a:[['numPedido','pk'],['dataPedido'],['cpfCliente']].concat(CLI_ATTRS,[['matVendedor'],['nomeVendedor']])},
+    tel1:    {t:'CLIENTE_TELEFONE', isNew:true, a:[['cpfCliente','pk pend'],['telefone','pk']]},
+    item1:   {t:'ITEM_PEDIDO', isNew:true, a:[['numPedido','pk fk'],['codProduto','pk'],['ean'],['descricao'],['precoTabela'],['quantidade'],['precoVendido']]},
+    tel2:    {t:'CLIENTE_TELEFONE', a:[['cpfCliente','pk pend'],['telefone','pk']]},
+    produto: {t:'PRODUTO', a:[['codProduto','pk'],['ean','ak'],['descricao'],['precoTabela']]},
+    item2:   {t:'ITEM_PEDIDO', a:[['numPedido','pk fk'],['codProduto','pk fk'],['quantidade'],['precoVendido']]},
+    cliente: {t:'CLIENTE', a:[['cpfCliente','pk'],['nomeCliente'],['emailCliente','ak']].concat(CLI_ATTRS.slice(2))},
+    tel3:    {t:'CLIENTE_TELEFONE', a:[['cpfCliente','pk fk'],['telefone','pk']]},
+    vendedor:{t:'VENDEDOR', a:[['matVendedor','pk'],['nomeVendedor']]},
+    pedido3: {t:'PEDIDO', a:[['numPedido','pk'],['dataPedido'],['cpfCliente','fk'],['matVendedor','fk']]}
+  };
+  function withNew(def, flag){ return assign(def, {isNew:flag}); }
+
+  function notation(def){
+    var parts = def.a.map(function(x){
+      var n=x[0], r=x[1]||'', sup='';
+      if (r.indexOf('pend')>-1) sup='<sup>FK pendente</sup>';
+      else if (r.indexOf('fk')>-1) sup='<sup>FK</sup>';
+      else if (r.indexOf('ak')>-1) sup='<sup>AK</sup>';
+      return '<span class="'+r+'">'+n+sup+'</span>';
+    }).join(', ');
+    return '<div class="rel-line">'+(def.isNew?'<span class="newtag">nova</span>':'')+'<span class="t">'+def.t+'</span> ('+parts+')</div>';
+  }
+  function schemaInto(id, defs){ document.getElementById(id).innerHTML = defs.map(notation).join(''); }
+
+  /* rep: [{det:'cpfCliente', cols:[...]}] marca valores que repetem um determinante já visto */
+  function relTable(def, rows, rep){
+    rep = rep || [];
+    var seen = rep.map(function(){ return {}; });
+    var th = def.a.map(function(x){ var r=(x[1]||'').replace('pend','fk'); return '<th class="'+r+'" scope="col">'+x[0]+'</th>'; }).join('');
+    var body = rows.map(function(row){
+      var mark = {};
+      rep.forEach(function(g, gi){
+        var v=row[g.det];
+        if (seen[gi][v]) g.cols.forEach(function(c){ mark[c]=true; });
+        seen[gi][v]=true;
+      });
+      return '<tr>'+def.a.map(function(x){
+        var k=x[0], cls=[];
+        if (isNum(k)) cls.push('num');
+        if (mark[k]) cls.push('rep');
+        return '<td'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+fmt(k,row[k])+'</td>';
+      }).join('')+'</tr>';
+    }).join('');
+    return '<div class="tbl-wrap"><table><caption>'+def.t+'</caption><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
+
+  var CLI_COLS = ['nomeCliente','emailCliente','logradouro','numero','bairro','cidade','uf','cep'];
+  var REP_PED = [{det:'cpfCliente', cols:CLI_COLS},{det:'matVendedor', cols:['nomeVendedor']}];
+  var REP_PROD = [{det:'codProduto', cols:['ean','descricao','precoTabela']}];
+
+  var pedidoWide = D.pedidos.map(function(p){ return assign(p, cli(p.cpfCliente), {nomeVendedor: vend(p.matVendedor).nomeVendedor}); });
+  var itemWide = D.itens.map(function(i){ return assign(i, prod(i.codProduto)); });
+
+  /* ---------- ficha não normalizada ---------- */
+  function renderFicha(){
+    var h = '<table class="ficha"><caption>PEDIDOS (planilha original)</caption><thead><tr>'+
+      '<th rowspan="2">numPedido</th><th rowspan="2">dataPedido</th><th rowspan="2">cpfCliente</th><th rowspan="2">nomeCliente</th><th rowspan="2">emailCliente</th>'+
+      '<th rowspan="2" class="p1">endereço<small>composto</small></th><th rowspan="2" class="p1">telefones<small>multivalorado</small></th>'+
+      '<th rowspan="2">matVendedor</th><th rowspan="2">nomeVendedor</th>'+
+      '<th colspan="6" class="p1 grp">itens<small>grupo repetitivo</small></th></tr><tr>'+
+      '<th>codProduto</th><th>ean</th><th>descricao</th><th>precoTabela</th><th>quantidade</th><th>precoVendido</th></tr></thead><tbody>';
+    var sc={}, sv={}, sp={};
+    D.pedidos.forEach(function(p){
+      var c=cli(p.cpfCliente), v=vend(p.matVendedor);
+      var its=D.itens.filter(function(i){ return i.numPedido===p.numPedido; });
+      var tels=D.telefones.filter(function(t){ return t.cpfCliente===p.cpfCliente; }).map(function(t){ return esc(t.telefone); }).join('<br>');
+      var rc = sc[p.cpfCliente] ? ' class="rep"' : '', rv = sv[p.matVendedor] ? ' class="rep"' : '';
+      sc[p.cpfCliente]=true; sv[p.matVendedor]=true;
+      var end = c.logradouro+', '+c.numero+' – '+c.bairro+' – '+c.cidade+'/'+c.uf+' – '+c.cep;
+      var rs=' rowspan="'+its.length+'"';
+      its.forEach(function(it, idx){
+        var pr=prod(it.codProduto), rp = sp[it.codProduto] ? ' rep' : ''; sp[it.codProduto]=true;
+        h+='<tr>';
+        if (idx===0){
+          h+='<td'+rs+'>'+p.numPedido+'</td><td'+rs+'>'+p.dataPedido+'</td><td'+rs+'>'+p.cpfCliente+'</td>'+
+             '<td'+rs+rc+'>'+esc(c.nomeCliente)+'</td><td'+rs+rc+'>'+esc(c.emailCliente)+'</td><td'+rs+rc+'>'+esc(end)+'</td><td'+rs+rc+'>'+tels+'</td>'+
+             '<td'+rs+'>'+p.matVendedor+'</td><td'+rs+rv+'>'+esc(v.nomeVendedor)+'</td>';
+        }
+        h+='<td>'+it.codProduto+'</td><td class="'+rp+'">'+pr.ean+'</td><td class="'+rp+'">'+esc(pr.descricao)+'</td><td class="num'+rp+'">'+money(pr.precoTabela)+'</td>'+
+           '<td class="num">'+it.quantidade+'</td><td class="num">'+money(it.precoVendido)+'</td></tr>';
+      });
+    });
+    document.getElementById('t-ficha').innerHTML = h+'</tbody></table>';
+  }
+  renderFicha();
+
+  /* ---------- esquemas e dados das etapas ---------- */
+  schemaInto('s-fn1', [S.pedido1, S.tel1, S.item1]);
+  document.getElementById('d-fn1').innerHTML =
+    relTable(S.pedido1, pedidoWide, REP_PED) + relTable(S.tel1, D.telefones) + relTable(S.item1, itemWide, REP_PROD);
+
+  schemaInto('s-fn2', [S.pedido1, S.tel2, withNew(S.produto,true), S.item2]);
+  document.getElementById('d-fn2').innerHTML =
+    relTable(S.pedido1, pedidoWide, REP_PED) + relTable(S.tel2, D.telefones) + relTable(S.produto, D.produtos) + relTable(S.item2, D.itens);
+
+  var FINAL = [withNew(S.cliente,true), S.tel3, withNew(S.vendedor,true), S.produto, S.pedido3, S.item2];
+  schemaInto('s-fn3', FINAL);
+  document.getElementById('d-fn3').innerHTML =
+    relTable(S.cliente, D.clientes) + relTable(S.tel3, D.telefones) + relTable(S.vendedor, D.vendedores) +
+    relTable(S.produto, D.produtos) + relTable(S.pedido3, D.pedidos) + relTable(S.item2, D.itens);
+  schemaInto('s-final', [S.cliente, S.tel3, S.vendedor, S.produto, S.pedido3, S.item2]);
+
+  var LEGEND = '<span><span class="pk">sublinhado</span> chave primária</span>'+
+    '<span><span class="ak">atributo<sup>AK</sup></span> chave alternativa</span>'+
+    '<span><span class="fk">atributo<sup>FK</sup></span> chave estrangeira</span>';
+  document.querySelectorAll('[data-legend]').forEach(function(el){ el.innerHTML = LEGEND; });
+
+  /* ---------- contadores e destaque de redundância ---------- */
+  function updateCounters(){
+    document.querySelectorAll('section[data-step]').forEach(function(sec){
+      var c = sec.querySelector('[data-count]'); if (!c) return;
+      var n = sec.querySelectorAll('td.rep').length;
+      c.innerHTML = n ? 'Valores repetidos nesta etapa: <b>'+n+'</b>' : 'Valores repetidos nesta etapa: <b>0</b>. Cada fato está guardado uma única vez.';
+    });
+  }
+  updateCounters();
+  function setRep(on){
+    document.body.classList.toggle('show-rep', on);
+    document.querySelectorAll('.rep-toggle').forEach(function(b){
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.textContent = on ? 'Ocultar destaque' : 'Destacar dados repetidos';
+    });
+  }
+  document.querySelectorAll('.rep-toggle').forEach(function(b){
+    b.addEventListener('click', function(){ setRep(!document.body.classList.contains('show-rep')); });
+  });
+
+  /* ---------- mapa de dependências ---------- */
+  var CHIPS = [
+    ['numPedido'],['dataPedido'],['cpfCliente'],['nomeCliente'],['emailCliente'],['endereco','endereço','composto'],['telefones','telefones','multivalorado'],
+    ['matVendedor'],['nomeVendedor'],['codProduto'],['ean'],['descricao'],['precoTabela'],['quantidade'],['precoVendido']
+  ];
+  var TAGS = {
+    pk:{c:'var(--pk)', l:'chave primária'}, ak:{c:'var(--ak)', l:'chave alternativa'},
+    multi:{c:'var(--fn1)', l:'multivalorada'}, parcial:{c:'var(--fn2)', l:'gera dependência parcial'},
+    trans:{c:'var(--fn3)', l:'gera dependência transitiva'}
+  };
+  var FDS = [
+    {id:'DF1', det:['numPedido'], dep:['dataPedido','cpfCliente','matVendedor'], n:'numPedido → dataPedido, cpfCliente, matVendedor', tag:'pk', mora:'PEDIDO',
+     x:'Conhecendo o número do pedido, sabemos a data, quem comprou e quem vendeu. <code>numPedido</code> é a chave primária do pedido.'},
+    {id:'DF2', det:['cpfCliente'], dep:['nomeCliente','emailCliente','endereco'], n:'cpfCliente → nomeCliente, emailCliente, endereço', tag:'trans', mora:'CLIENTE',
+     x:'O CPF determina nome, e-mail e endereço. Como o próprio CPF é determinado pelo número do pedido (DF1), forma-se a cadeia <code>numPedido → cpfCliente → nomeCliente</code>: dependência transitiva.'},
+    {id:'DF3', det:['emailCliente'], dep:['cpfCliente'], n:'emailCliente → cpfCliente', tag:'ak', mora:'CLIENTE (UNIQUE)',
+     x:'Cada e-mail pertence a um único cliente. O e-mail também identifica o cliente: é uma chave candidata, que tratamos como alternativa.'},
+    {id:'DF4', det:['cpfCliente'], dep:['telefones'], n:'cpfCliente →→ telefone', tag:'multi', mora:'CLIENTE_TELEFONE',
+     x:'Um CPF corresponde a <b>vários</b> telefones. Não é uma DF comum, é uma dependência multivalorada (→→). É o sinal de um atributo multivalorado, e diz que o telefone pertence ao cliente, não ao pedido.'},
+    {id:'DF5', det:['matVendedor'], dep:['nomeVendedor'], n:'matVendedor → nomeVendedor', tag:'trans', mora:'VENDEDOR',
+     x:'A matrícula determina o nome do vendedor. Junto com a DF1, forma outra cadeia transitiva: <code>numPedido → matVendedor → nomeVendedor</code>.'},
+    {id:'DF6', det:['codProduto'], dep:['ean','descricao','precoTabela'], n:'codProduto → ean, descricao, precoTabela', tag:'parcial', mora:'PRODUTO',
+     x:'O código do produto, sozinho, determina EAN, descrição e preço de tabela. Mas a chave do item é <code>{numPedido, codProduto}</code>: esses atributos dependem de só uma parte da chave. Dependência parcial.'},
+    {id:'DF7', det:['ean'], dep:['codProduto'], n:'ean → codProduto', tag:'ak', mora:'PRODUTO (UNIQUE)',
+     x:'O EAN identifica o produto: é chave candidata de produto, e fica como chave alternativa.'},
+    {id:'DF8', det:['numPedido','codProduto'], dep:['quantidade','precoVendido'], n:'{numPedido, codProduto} → quantidade, precoVendido', tag:'pk', mora:'ITEM_PEDIDO',
+     x:'Quantidade e preço vendido só fazem sentido para um produto <b>dentro de um pedido</b>. Dependem da chave inteira: é a dependência que queremos ter.'}
+  ];
+  var map = document.getElementById('fdmap');
+  map.innerHTML = CHIPS.map(function(c){
+    return '<span class="chip" data-a="'+c[0]+'">'+(c[1]||c[0])+(c[2]?'<small>'+c[2]+'</small>':'')+'</span>';
+  }).join('');
+  var list = document.getElementById('fdlist'), exp = document.getElementById('fdexp');
+  list.innerHTML = FDS.map(function(f, i){
+    var t=TAGS[f.tag];
+    return '<li><button class="fd" data-i="'+i+'" aria-pressed="false" style="--tc:'+t.c+'"><span class="id">'+f.id+'</span><code>'+esc(f.n)+'</code><span class="tag" style="--tc:'+t.c+'">'+t.l+'</span></button></li>';
+  }).join('');
+  list.addEventListener('click', function(e){
+    var b = e.target.closest('.fd'); if (!b) return;
+    var already = b.getAttribute('aria-pressed')==='true';
+    list.querySelectorAll('.fd').forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+    map.querySelectorAll('.chip').forEach(function(ch){ ch.classList.remove('det','dep'); });
+    if (already){ map.classList.remove('active'); exp.innerHTML='Escolha uma dependência para ver quem determina quem.'; return; }
+    var f = FDS[+b.dataset.i];
+    b.setAttribute('aria-pressed','true');
+    map.classList.add('active');
+    map.style.setProperty('--tc', TAGS[f.tag].c);
+    f.det.forEach(function(a){ var el=map.querySelector('[data-a="'+a+'"]'); if (el) el.classList.add('det'); });
+    f.dep.forEach(function(a){ var el=map.querySelector('[data-a="'+a+'"]'); if (el) el.classList.add('dep'); });
+    exp.innerHTML = '<b>'+f.id+'.</b> '+f.x;
+  });
+
+  /* preservação das dependências */
+  document.getElementById('t-preserv').innerHTML =
+    '<table class="prose"><thead><tr><th>Dependência</th><th></th><th>Garantida em</th></tr></thead><tbody>'+
+    FDS.map(function(f){ return '<tr><td><b>'+f.id+'</b></td><td><code>'+esc(f.n)+'</code></td><td><code>'+f.mora+'</code></td></tr>'; }).join('')+
+    '</tbody></table>';
+
+  /* ---------- diagrama ---------- */
+  (function(){
+    var W=200, HEAD=34, ROW=22;
+    var boxes = [
+      {d:S.tel3, x:20, y:20}, {d:S.cliente, x:20, y:150}, {d:S.pedido3, x:280, y:150},
+      {d:S.vendedor, x:540, y:150}, {d:S.item2, x:280, y:330}, {d:S.produto, x:540, y:330}
+    ];
+    var s = '<svg viewBox="0 0 760 476" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="er-head-arrow"/></marker></defs>';
+    boxes.forEach(function(b){
+      var h = HEAD + b.d.a.length*ROW + 10;
+      s += '<rect class="er-box" x="'+b.x+'" y="'+b.y+'" width="'+W+'" height="'+h+'" rx="6"/>';
+      s += '<path class="er-head" d="M'+(b.x+1)+','+(b.y+HEAD)+' V'+(b.y+7)+' Q'+(b.x+1)+','+(b.y+1)+' '+(b.x+7)+','+(b.y+1)+' H'+(b.x+W-7)+' Q'+(b.x+W-1)+','+(b.y+1)+' '+(b.x+W-1)+','+(b.y+7)+' V'+(b.y+HEAD)+' Z"/>';
+      s += '<text class="er-t" x="'+(b.x+12)+'" y="'+(b.y+22)+'">'+b.d.t+'</text>';
+      b.d.a.forEach(function(x, i){
+        var r=x[1]||'', y=b.y+HEAD+ROW*i+20, cls='er-a';
+        if (r.indexOf('pk')>-1) cls+=' pk'; else if (r.indexOf('fk')>-1) cls+=' fk'; else if (r.indexOf('ak')>-1) cls+=' ak';
+        var badge = []; if (r.indexOf('pk')>-1) badge.push('PK'); if (r.indexOf('fk')>-1) badge.push('FK'); if (r.indexOf('ak')>-1) badge.push('AK');
+        s += '<text class="'+cls+'" x="'+(b.x+12)+'" y="'+y+'">'+x[0]+'</text>';
+        if (badge.length) s += '<text class="er-b" x="'+(b.x+W-10)+'" y="'+y+'" text-anchor="end">'+badge.join(' ')+'</text>';
+      });
+    });
+    var lines = [
+      {d:'M120,108 V147', n:[128,124], o:[128,145]},
+      {d:'M280,243 H250 V199 H223', n:[266,238], o:[228,194]},
+      {d:'M480,265 H510 V199 H537', n:[486,260], o:[528,194]},
+      {d:'M330,330 V285', n:[338,324], o:[338,298]},
+      {d:'M480,401 H510 V379 H537', n:[486,396], o:[528,374]}
+    ];
+    lines.forEach(function(l){
+      s += '<path class="er-line" d="'+l.d+'" marker-end="url(#arr)"/>';
+      s += '<text class="er-c" x="'+l.n[0]+'" y="'+l.n[1]+'">N</text><text class="er-c" x="'+l.o[0]+'" y="'+l.o[1]+'">1</text>';
+    });
+    document.getElementById('diagram').innerHTML = s + '</svg>';
+  })();
+
+  /* ---------- integridade referencial ---------- */
+  var bad = false;
+  var BAD_PEDIDO = {numPedido:1004, dataPedido:'13/03/2026', cpfCliente:'999.999.999-99', matVendedor:'V01'};
+  function checkRI(){
+    var pedidos = bad ? D.pedidos.concat([BAD_PEDIDO]) : D.pedidos;
+    var fks = [
+      {n:'ITEM_PEDIDO.numPedido → PEDIDO', rows:D.itens, c:'numPedido', ref:pedidos, rc:'numPedido'},
+      {n:'ITEM_PEDIDO.codProduto → PRODUTO', rows:D.itens, c:'codProduto', ref:D.produtos, rc:'codProduto'},
+      {n:'CLIENTE_TELEFONE.cpfCliente → CLIENTE', rows:D.telefones, c:'cpfCliente', ref:D.clientes, rc:'cpfCliente'},
+      {n:'PEDIDO.cpfCliente → CLIENTE', rows:pedidos, c:'cpfCliente', ref:D.clientes, rc:'cpfCliente'},
+      {n:'PEDIDO.matVendedor → VENDEDOR', rows:pedidos, c:'matVendedor', ref:D.vendedores, rc:'matVendedor'}
+    ];
+    var total = 0;
+    var items = fks.map(function(f){
+      var miss = f.rows.filter(function(r){ return !find(f.ref, f.rc, r[f.c]); });
+      total += miss.length;
+      if (!miss.length) return '<li><span class="ok">✓</span> <code>'+f.n+'</code>: '+f.rows.length+' valores, todos encontrados.</li>';
+      return '<li><span class="bad">✗</span> <code>'+f.n+'</code>: '+miss.map(function(m){ return 'o valor <code>'+esc(m[f.c])+'</code> não existe na tabela referenciada'; }).join('; ')+'.</li>';
+    });
+    var head = total
+      ? '<p><span class="bad">'+total+' violação encontrada.</span> O pedido 1004 aponta para um cliente que não existe. Com a chave estrangeira declarada, o SGBD recusaria esta inserção.</p>'
+      : '<p><span class="ok">Integridade referencial preservada.</span> Toda chave estrangeira encontra a linha que referencia.</p>';
+    document.getElementById('ri-out').innerHTML = head + '<ul>'+items.join('')+'</ul>';
+  }
+  document.getElementById('btn-ri').addEventListener('click', checkRI);
+  document.getElementById('btn-bad').addEventListener('click', function(){
+    bad = !bad;
+    this.setAttribute('aria-pressed', bad ? 'true' : 'false');
+    this.textContent = bad ? 'Remover pedido 1004 simulado' : 'Simular pedido 1004 com CPF não cadastrado';
+    checkRI();
+  });
+
+  /* ---------- junção ---------- */
+  document.getElementById('btn-join').addEventListener('click', function(){
+    var rows = [];
+    D.pedidos.forEach(function(p){
+      var c=cli(p.cpfCliente), v=vend(p.matVendedor);
+      D.itens.filter(function(i){ return i.numPedido===p.numPedido; }).forEach(function(i){
+        var pr=prod(i.codProduto);
+        rows.push({numPedido:p.numPedido, dataPedido:p.dataPedido, nomeCliente:c.nomeCliente, emailCliente:c.emailCliente, cidade:c.cidade,
+                   nomeVendedor:v.nomeVendedor, descricao:pr.descricao, quantidade:i.quantidade, precoVendido:i.precoVendido});
+      });
+    });
+    var def = {t:'Resultado da junção', a:[['numPedido'],['dataPedido'],['nomeCliente'],['emailCliente'],['cidade'],['nomeVendedor'],['descricao'],['quantidade'],['precoVendido']]};
+    document.getElementById('join-out').innerHTML = relTable(def, rows) +
+      '<div class="result"><span class="ok">'+rows.length+' linhas reconstruídas</span>, uma para cada item da ficha original. A informação é a mesma; a diferença é que agora cada fato está armazenado uma única vez.</div>';
+    this.textContent = 'Executar de novo';
+  });
+
+  /* ---------- quiz ---------- */
+  var Q = [
+    {q:'Em ITEM_PEDIDO(numPedido, codProduto, descricao, quantidade), com chave {numPedido, codProduto}, a dependência codProduto → descricao é…',
+     o:['parcial','transitiva','multivalorada','completa'], ok:0,
+     e:'codProduto é só parte da chave. Depender de parte da chave é dependência parcial, resolvida na 2FN.'},
+    {q:'Em PRODUTO(codProduto, ean, descricao, precoTabela) vale ean → descricao. Isso viola a 3FN?',
+     o:['Sim, é uma dependência transitiva','Não, porque ean é chave candidata','Sim, é uma dependência parcial'], ok:1,
+     e:'A 3FN proíbe dependência entre atributos não-chave. Como ean é chave candidata (alternativa), não há problema.'},
+    {q:'Uma tabela na 1FN cuja chave primária é simples…',
+     o:['já está na 2FN','precisa ser decomposta','pode ter dependência parcial'], ok:0,
+     e:'Dependência parcial exige uma parte da chave para depender. Chave simples não tem partes.'},
+    {q:'Ao criar VENDEDOR na 3FN, o que permanece em PEDIDO?',
+     o:['Nada sobre o vendedor','matVendedor, como chave estrangeira','nomeVendedor, como chave estrangeira'], ok:1,
+     e:'O determinante vira chave primária da nova tabela e continua na origem como chave estrangeira. É o elo que permite a junção.'},
+    {q:'Por que CLIENTE_TELEFONE usa cpfCliente, e não numPedido?',
+     o:['Porque o telefone é determinado pelo cliente (cpfCliente →→ telefone)','Porque numPedido já é a chave de PEDIDO','Por convenção de nomes'], ok:0,
+     e:'A dependência multivalorada mostra a quem o telefone pertence. Usar numPedido repetiria os telefones da Ana a cada pedido dela.'}
+  ];
+  var answered = 0, right = 0;
+  var qz = document.getElementById('quiz');
+  qz.innerHTML = Q.map(function(q, i){
+    return '<div class="q" data-q="'+i+'"><p>'+(i+1)+'. '+esc(q.q)+'</p><div class="opts">'+
+      q.o.map(function(o, j){ return '<button class="opt" data-j="'+j+'">'+esc(o)+'</button>'; }).join('')+
+      '</div><div class="exp" aria-live="polite"></div></div>';
+  }).join('');
+  qz.addEventListener('click', function(e){
+    var b = e.target.closest('.opt'); if (!b || b.disabled) return;
+    var box = b.closest('.q'), q = Q[+box.dataset.q], j = +b.dataset.j;
+    box.querySelectorAll('.opt').forEach(function(x){ x.disabled = true; });
+    box.querySelectorAll('.opt')[q.ok].classList.add('right');
+    var ok = j===q.ok;
+    if (!ok) b.classList.add('wrong');
+    answered++; if (ok) right++;
+    box.querySelector('.exp').innerHTML = '<b style="color:'+(ok?'var(--ok)':'var(--bad)')+'">'+(ok?'Isso mesmo.':'Não é essa.')+'</b> '+q.e;
+    if (answered===Q.length) document.getElementById('score').textContent = 'Você acertou '+right+' de '+Q.length+'.';
+  });
+
+  /* ---------- navegação ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section[data-step]'));
+  var ids = sections.map(function(s){ return s.dataset.step; });
+  var links = Array.prototype.slice.call(document.querySelectorAll('#steps a'));
+  sections.forEach(function(sec, i){
+    var nav = sec.querySelector('.stepnav'), h='';
+    h += i>0 ? '<button class="btn" data-go="'+ids[i-1]+'"><span>Anterior</span>'+sections[i-1].dataset.title+'</button>' : '<span></span>';
+    if (i<sections.length-1) h += '<button class="btn primary" data-go="'+ids[i+1]+'"><span>Próximo</span>'+sections[i+1].dataset.title+'</button>';
+    nav.innerHTML = h;
+  });
+  function show(id, focus){
+    var idx = ids.indexOf(id); if (idx<0){ idx=0; id=ids[0]; }
+    sections.forEach(function(s, i){ s.classList.toggle('on', i===idx); });
+    var sc = sections[idx].style.getPropertyValue('--sc');
+    links.forEach(function(a, i){
+      a.classList.toggle('done', i<idx);
+      if (i===idx){ a.setAttribute('aria-current','step'); a.style.setProperty('--sc', sc); if (a.scrollIntoView && window.matchMedia('(max-width: 900px)').matches) a.scrollIntoView({block:'nearest', inline:'center'}); }
+      else { a.removeAttribute('aria-current'); a.style.removeProperty('--sc'); }
+    });
+    try { history.replaceState(null, '', '#'+id); } catch(e){}
+    if (focus){ window.scrollTo(0,0); document.getElementById('main').focus({preventScroll:true}); }
+  }
+  document.addEventListener('click', function(e){
+    var g = e.target.closest('[data-go]'); if (!g) return;
+    e.preventDefault(); show(g.dataset.go, true);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))) return;
+    var cur = ids.indexOf((document.querySelector('section.on')||{}).dataset.step);
+    if (e.key==='ArrowRight' && cur<ids.length-1) show(ids[cur+1], true);
+    if (e.key==='ArrowLeft' && cur>0) show(ids[cur-1], true);
+  });
+  show((location.hash||'').replace('#',''), false);
+})();
+</script>
+</body>
+</html>
