@@ -189,7 +189,7 @@ summary{cursor:pointer;font-weight:700}
 .stepnav .btn span{display:block;font-size:.78rem;color:inherit;opacity:.8;font-weight:400}
 
 @media (max-width: 900px){
-  .layout{grid-template-columns:1fr;gap:0;padding:0 0 56px}
+  .layout{grid-template-columns:minmax(0,1fr);gap:0;padding:0 0 56px}
   #steps{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);border-bottom:1px solid var(--line)}
   #steps .brand{display:none}
   #steps ol{display:flex;overflow-x:auto;border-left:0;scrollbar-width:none}
